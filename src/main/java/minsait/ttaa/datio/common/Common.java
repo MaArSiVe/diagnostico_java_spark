@@ -8,4 +8,10 @@ public final class Common {
     public static final String INPUT_PATH = "src/test/resources/data/players_21.csv";
     public static final String OUTPUT_PATH = "src/test/resources/data/output";
 
+    public static final String VALUE_A = "A";
+    public static final String VALUE_B = "B";
+    public static final String VALUE_C = "C";
+    public static final String VALUE_D = "D";
+
+
 }

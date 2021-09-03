@@ -11,31 +11,36 @@ import org.jetbrains.annotations.NotNull;
 
 import static minsait.ttaa.datio.common.Common.*;
 import static minsait.ttaa.datio.common.naming.PlayerInput.*;
-import static org.apache.spark.sql.functions.*;
+import static org.apache.spark.sql.functions.row_number;
+import static org.apache.spark.sql.functions.when;
 
-public class Transformer extends Writer {
+public class TransformerTest extends Writer {
     private SparkSession spark;
+    private Dataset<Row> df;
 
-    public Transformer(@NotNull SparkSession spark) {
+    public TransformerTest(@NotNull SparkSession spark) {
         this.spark = spark;
-        Dataset<Row> df = readInput();
+        df = readInput();
 
         df.printSchema();
 
         df = cleanData(df);
-       // df = exampleWindowFunction(df);
+    }
+
+    public int ejercicioTest(int opcion)
+    {
+        Long contador = null;
         df = ageCheckFunction(df);
         df = rankByNationalityPosFunction(df);
         df = potentialVsOverallFunction(df);
-        df = filterEjercicio5(df);
+        contador = filterEjercicio5(df, opcion);
         df = columnSelection(df);
 
         // for show 100 records after your transformations and show the Dataset schema
         df.show(100, false);
         df.printSchema();
 
-        // Uncomment when you want write your final output
-        write(df);
+        return contador.intValue();
     }
 
     private Dataset<Row> columnSelection(Dataset<Row> df) {
@@ -62,7 +67,7 @@ public class Transformer extends Writer {
      */
     private Dataset<Row> readInput() {
         PropertyReader propertyReader = new PropertyReader();
-        String data = "";
+        String data;
         data = propertyReader.getData();
         if (data.equals(""))
             data = INPUT_PATH;
@@ -77,7 +82,7 @@ public class Transformer extends Writer {
     /**
      * @param df
      * @return a Dataset with filter transformation applied
-     * Se obtiene un query base con informacion consistente.
+     * column team_position != null && column short_name != null && column overall != null
      */
     private Dataset<Row> cleanData(Dataset<Row> df) {
         df = df.filter(
@@ -172,29 +177,38 @@ public class Transformer extends Writer {
     /**
      * Creado por Manuel Silva 02/09/2021
      * @param df
+     * @param opcion
      * @return un Dataset con un filtro de transformacion aplicado
      * Metodo para probar distintos tipos de filtro
      */
-    private Dataset<Row> filterEjercicio5(Dataset<Row> df) {
-       // df = filterEj51ByNationalityPos(df);
+    private Long filterEjercicio5(Dataset<Row> df, int opcion) {
+
+        switch (opcion)
+        {
+            case 1:
+                return filterEj51ByNationalityPos(df);
+            case 2:
+                return filterEj52ByAgeRangePvO(df);
+            default:
+                return new Long(0);
+        }
+
        // df = filterEj52ByAgeRangePvO(df);
        // df = filterEj53ByAgeRangePvO(df);
-        df = filterEj54ByAgeRangePvO(df);
+       // df = filterEj54ByAgeRangePvO(df);
 
-        return df;
     }
 
     /**
      * Creado por Manuel Silva 02/09/2021
      * @param df
-     * @return un Dataset con un filtro de transformacion aplicado
-     * Metodo para probar distintos tipos de filtro:
+     * @return un Dataset con un filtro de transformacion aplicado     * Metodo para probar distintos tipos de filtro:
      * Si rank_by_nationality_position es menor a 3
      */
-    private Dataset<Row> filterEj51ByNationalityPos(Dataset<Row> df) {
+    private Long filterEj51ByNationalityPos(Dataset<Row> df) {
         df = df.filter(rank_by_nationality_position.column().$less(3));
 
-        return df;
+        return df.where(rank_by_nationality_position.column().$greater(3)).count();
     }
 
     /**
@@ -204,13 +218,13 @@ public class Transformer extends Writer {
      * Metodo para probar distintos tipos de filtro:
      * Si age_range es B o C y potential_vs_overall es superior a 1.15
      */
-    private Dataset<Row> filterEj52ByAgeRangePvO(Dataset<Row> df) {
+    private Long filterEj52ByAgeRangePvO(Dataset<Row> df) {
         df = df.filter(
                 (age_range.column().equalTo(VALUE_B).or(age_range.column().equalTo(VALUE_C))
                         .and(potential_vs_overall.column().$greater(1.15)))
         );
 
-        return df;
+        return df.where(potential_vs_overall.column().$less(1.15)).count();
     }
 
     /**
